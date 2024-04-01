@@ -32,7 +32,10 @@ const uint8_t SD_CS_PIN = 46;
 #define LED_PIN   38
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
 MFRC522 mfrc522(MFRC522_SS_PIN, RST_PIN);   // Create MFRC522 instance.
+MFRC522::StatusCode status;
+
 WiFiMulti wifiMulti;
 String ssid =     "spaz";
 String password = "connelly3720232";
@@ -42,7 +45,6 @@ SPIClass AUDIO_SPI(HSPI);
 void dump_byte_array(byte *buffer, byte bufferSize);
 
 [[noreturn]] void audio_task(void *param);
-
 [[noreturn]] void rfid_task(void *param);
 
 /**
@@ -72,8 +74,8 @@ void setup() {
 
   Serial.println("Starting RFID task");
   xTaskCreatePinnedToCore( rfid_task, "rfid_task", 1024*4, NULL, 2 | portPRIVILEGE_BIT, NULL, 1);
-  Serial.println("Starting audio task");
-  xTaskCreate( audio_task, "audio_task", 1024*8, NULL, 2 | portPRIVILEGE_BIT, NULL);
+//  Serial.println("Starting audio task");
+//  xTaskCreate( audio_task, "audio_task", 1024*8, NULL, 2 | portPRIVILEGE_BIT, NULL);
 
 }
 
@@ -93,12 +95,7 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
 }
 
 [[noreturn]] void audio_task(void *param) {
-//  while(true) {
-//    Serial.println("audio_task");
-//    vTaskDelay(1000);
-//  }
-
-  AUDIO_SPI.begin(SCK, MISO, MOSI, SD_CS_PIN);
+   AUDIO_SPI.begin(SCK, MISO, MOSI, SD_CS_PIN);
 
   Serial.println("Delaying 5 seconds...");
   vTaskDelay(5000);
@@ -147,26 +144,71 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
   mfrc522.PCD_Init();
   mfrc522.PCD_DumpVersionToSerial();
 
-  for (;;) {
-    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
-      Serial.print(F("Card UID:"));
-      dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
-      Serial.println();
-      MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
-      Serial.println(mfrc522.PICC_GetTypeName(piccType));
-      // Halt PICC
-      mfrc522.PICC_HaltA();
-      // Stop encryption on PCD
-      mfrc522.PCD_StopCrypto1();
+  // Prepare key - all keys are set to FFFFFFFFFFFF at chip delivery from the factory.
+  MFRC522::MIFARE_Key key;
+  for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
 
+
+  Serial.println("Key: ");
+  dump_byte_array(key.keyByte, MFRC522::MF_KEY_SIZE);
+  Serial.println();
+
+  byte block;
+  byte len;
+
+  for (;;) {
+
+    if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
       strip.setPixelColor(0, 0xFF0000);
       strip.show();
       vTaskDelay(500);
       strip.setPixelColor(0, 0x000000);
       strip.show();
 
+      Serial.print(F("Card UID:"));
+      dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size);
+      Serial.println();
+      MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
+      Serial.println(mfrc522.PICC_GetTypeName(piccType));
+
+      byte buffer1[18];
+
+      block = 4;
+      len = 18;
+
+//      mfrc522.MIFARE_UnbrickUidSector(true);
+
+      status = mfrc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, 1, &key, &(mfrc522.uid));
+      if (status != MFRC522::STATUS_OK) {
+        Serial.print(F("Authentication failed: "));
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        vTaskDelay(1000);
+        continue;
+      }
+
+      status = mfrc522.MIFARE_Read(block, buffer1, &len);
+      if (status != MFRC522::STATUS_OK) {
+        Serial.print(F("Reading failed: "));
+        Serial.println(mfrc522.GetStatusCodeName(status));
+        vTaskDelay(1000);
+        continue;
+      }
+
+      string value = "";
+      for (uint8_t i = 0; i < 16; i++)
+      {
+        value += (char)buffer1[i];
+      }
+//      value.trim();
+      Serial.print(value.c_str());
+
+      // Halt PICC
+      mfrc522.PICC_HaltA();
+      // Stop encryption on PCD
+      mfrc522.PCD_StopCrypto1();
+
     } else {
-      vTaskDelay(100);
+      vTaskDelay(25);
     }
   }
 }

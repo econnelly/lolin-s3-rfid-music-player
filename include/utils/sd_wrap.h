@@ -6,7 +6,7 @@
 #define _SD_H_			// avoid original SD.h from being loaded
 
 #include <Arduino.h>
-#include <SdFat.h>
+#include "SdFat.h"
 
 /* use the first define if you are sure SD.cpp is not compiled, as the global
  * "SD" structure would conflict! Otherwise use SDFAT instead of SD in your code */

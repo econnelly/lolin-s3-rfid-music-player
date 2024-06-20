@@ -46,16 +46,16 @@ void init_audio() {
       int8_t vol = audio.getVolume();
 
       if (command == VOL_DOWN) {
-        vol = max(3, vol - 3);
+        vol = max(3, vol - 1);
         audio.setVolume(vol);
-        Serial.write("Decreasing volume: ");
-        Serial.write(vol);
+        Serial.write("Volume: ");
+        Serial.write((int) audio.getVolume());
         Serial.write("\n");
       } else if (command == VOL_UP) {
-        vol = min(vol + 3, (int) audio.maxVolume());
+        vol = min(vol + 1, (int) audio.maxVolume());
         audio.setVolume(vol);
-        Serial.write("Increasing volume: ");
-        Serial.write(vol);
+        Serial.write("Volume: ");
+        Serial.write((int) audio.getVolume());
         Serial.write("\n");
       } else if (command == STOP) {
         audio.stopSong();

@@ -6,6 +6,7 @@
 #include "modules/rfid.h"
 #include "modules/wifi.h"
 #include "modules/audio.h"
+#include "modules/input.h"
 
 // Try max SPI clock for an SD. Reduce SPI_CLOCK if errors occur.
 #define SPI_CLOCK SD_SCK_MHZ(50)
@@ -20,8 +21,6 @@
 
 #define NUM_LEDS  1
 #define LED_PIN   38
-
-#define STOP_BUTTON_PIN 8
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -46,10 +45,8 @@ void setup() {
 
   Serial.write("start\n");
 
-  pinMode(STOP_BUTTON_PIN, INPUT_PULLDOWN);
-
   init_main();
-
+  init_input();
   init_wifi();
 
   strip.begin();
@@ -59,6 +56,8 @@ void setup() {
   init_rfid(&strip);
   init_audio();
 
+  Serial.println("Starting input task");
+  xTaskCreate( input_task, "audio_task", 1024*8, (void *) &model, 2 | portPRIVILEGE_BIT, NULL);
   Serial.println("Starting RFID task");
   xTaskCreatePinnedToCore( rfid_task, "rfid_task", 1024*4, (void *) &model, 2 | portPRIVILEGE_BIT, NULL, 1);
   Serial.println("Starting audio task");
@@ -73,16 +72,4 @@ void init_main() {
 /**
  * Main loop.
  */
-void loop() {
-  stop_button_state = digitalRead(STOP_BUTTON_PIN);
-  if (stop_button_state > 0) {
-    while (xSemaphoreTake(model.audio_playback_semaphore, (TickType_t) 10) != pdTRUE) {
-        Serial.println("[audio] Can't take semaphore... waiting...");
-      }
-      model.playback_command = STOP;
-      xSemaphoreGive(model.audio_playback_semaphore);
-  }
-  
-  Serial.write("\n");
-  delay(100);
-}
+void loop() {}

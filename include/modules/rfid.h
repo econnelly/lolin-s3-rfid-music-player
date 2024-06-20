@@ -17,6 +17,7 @@
 void init_rfid(Adafruit_NeoPixel *s);
 MFRC522::MIFARE_Key get_rfid_key();
 void dump_byte_array(byte *buffer, byte bufferSize);
-void rfid_task(void *param);
+
+[[noreturn]] void rfid_task(void *model);
 
 #endif //LOLIN_S3_RFID_MUSIC_PLAYER_RFID_H

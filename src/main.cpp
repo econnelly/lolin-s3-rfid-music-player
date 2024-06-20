@@ -1,12 +1,11 @@
 #include <Arduino.h>
 #include <WiFiMulti.h>
 #include <Audio.h>
+#include "main.h"
 #include "common.h"
 #include "modules/rfid.h"
 #include "modules/wifi.h"
 #include "modules/audio.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 // Try max SPI clock for an SD. Reduce SPI_CLOCK if errors occur.
 #define SPI_CLOCK SD_SCK_MHZ(50)
@@ -22,9 +21,15 @@
 #define NUM_LEDS  1
 #define LED_PIN   38
 
+#define STOP_BUTTON_PIN 8
+
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 void dump_byte_array(byte *buffer, byte bufferSize);
+
+shared_model model;
+
+int stop_button_state = 0;
 
 /**
  * Initialize.
@@ -41,6 +46,10 @@ void setup() {
 
   Serial.write("start\n");
 
+  pinMode(STOP_BUTTON_PIN, INPUT_PULLDOWN);
+
+  init_main();
+
   init_wifi();
 
   strip.begin();
@@ -50,26 +59,30 @@ void setup() {
   init_rfid(&strip);
   init_audio();
 
-//  WiFi.mode(WIFI_STA);
-//  wifiMulti.addAP(ssid.c_str(), password.c_str());
-//  wifiMulti.run();
-//  if(WiFi.status() != WL_CONNECTED){
-//    WiFi.disconnect(true);
-//    wifiMulti.run();
-//  }
-
   Serial.println("Starting RFID task");
-  xTaskCreatePinnedToCore( rfid_task, "rfid_task", 1024*4, NULL, 2 | portPRIVILEGE_BIT, NULL, 1);
+  xTaskCreatePinnedToCore( rfid_task, "rfid_task", 1024*4, (void *) &model, 2 | portPRIVILEGE_BIT, NULL, 1);
   Serial.println("Starting audio task");
-  xTaskCreate( audio_task, "audio_task", 1024*8, NULL, 2 | portPRIVILEGE_BIT, NULL);
+  xTaskCreate( audio_task, "audio_task", 1024*8, (void *) &model, 2 | portPRIVILEGE_BIT, NULL);
 
+}
+
+void init_main() {
+  model.audio_playback_semaphore = xSemaphoreCreateMutex();
 }
 
 /**
  * Main loop.
  */
-void loop() {}
-
-
-
-
+void loop() {
+  stop_button_state = digitalRead(STOP_BUTTON_PIN);
+  if (stop_button_state > 0) {
+    while (xSemaphoreTake(model.audio_playback_semaphore, (TickType_t) 10) != pdTRUE) {
+        Serial.println("[audio] Can't take semaphore... waiting...");
+      }
+      model.playback_command = STOP;
+      xSemaphoreGive(model.audio_playback_semaphore);
+  }
+  
+  Serial.write("\n");
+  delay(100);
+}

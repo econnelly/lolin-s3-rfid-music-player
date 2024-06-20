@@ -22,7 +22,8 @@
 const uint8_t SD_CS_PIN = 46;
 
 void init_audio();
-void audio_task(void *param);
+
+[[noreturn]] void audio_task(void *model);
 
 
 #endif //LOLIN_S3_RFID_MUSIC_PLAYER_AUDIO_H

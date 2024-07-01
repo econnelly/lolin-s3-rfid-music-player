@@ -2,9 +2,9 @@
 #include "common.h"
 
 void init_input() {
-    pinMode(STOP_BUTTON_PIN, INPUT);
-    pinMode(VOLUP_BUTTON_PIN, INPUT);
-    pinMode(VOLDOWN_BUTTON_PIN, INPUT);
+    pinMode(STOP_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(VOLUP_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(VOLDOWN_BUTTON_PIN, INPUT_PULLUP);
 }
 
 [[noreturn]] void input_task(void *model) {

@@ -37,12 +37,6 @@ void setup() {
 
   Serial.begin(115200);
 
-
-  // Wait for USB Serial
-  // while (!Serial) {
-  //   yield();
-  // }
-
   Serial.write("start\n");
 
   init_main();

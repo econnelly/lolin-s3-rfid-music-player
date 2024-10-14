@@ -5,17 +5,19 @@
 #ifndef LOLIN_S3_RFID_MUSIC_PLAYER_RFID_H
 #define LOLIN_S3_RFID_MUSIC_PLAYER_RFID_H
 
-#include "MFRC522.h"
+#include <Adafruit_PN532.h>
 #include "common.h"
 
-#define RST_PIN                 5         // Configurable, see typical pin layout above
-#define MFRC522_SS_PIN          7         // Configurable, take a unused pin, only HIGH/LOW required, must be different to SS 2
-#define MFRC522_SCK             6
-#define MFRC522_MOSI            16
-#define MFRC522_MISO            15
+#define RST_PIN     5         // Configurable, see typical pin layout above
+#define PN532_SCK   6
+#define PN532_MOSI  16
+#define PN532_SS    7
+#define PN532_MISO  15
+
+#define NFC_BLOCK_SIZE 16
 
 void init_rfid(Adafruit_NeoPixel *s);
-MFRC522::MIFARE_Key get_rfid_key();
+uint8_t read_rfid(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out);
 void dump_byte_array(byte *buffer, byte bufferSize);
 
 [[noreturn]] void rfid_task(void *model);

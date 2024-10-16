@@ -66,23 +66,9 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
       nfc.PrintHex(uid, uidLength);
       Serial.println("");
 
-      // byte buffer1[18];
-
       block = 4;
       len = 18;
-
-//       char* value;
-//       for (uint8_t i = 0; i < 16; i++)
-//       {
-//         value += (char)buffer1[i];
-//       }
-// //      value.trim();
-//       Serial.print(value);
-
-      if (uidLength == 4) {
-      // We probably have a Mifare Classic card ...
-      Serial.println("Seems to be a Mifare Classic card (4 byte UID)");
-
+      
       uint8_t nfcType = read_rfid(rfid_key, uid, uidLength, rfid_string);
       if (nfcType > 0) {
         Serial.println(rfid_string);
@@ -90,10 +76,6 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
         Serial.println("NO STRING FOUND");
         continue;
       }
-      
-    } else {
-      Serial.println("Ooops ... this doesn't seem to be a Mifare Classic card!");
-    }
 
     if (stringEnded) {
       Serial.println(rfid_string);
@@ -108,10 +90,14 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
       String file_name = String(rfid_string);
       file_name.toUpperCase();
 
-      m->card_id = 0;
+      int32_t id = 0;
+      for(uint8_t i = 0; i < uidLength; i++) {
+        id += uid[i] << i*8;
+      }
+
+      m->card_id = id;
       m->playback_file_name.clear();
       m->playback_file_name.concat(file_name);
-      // m->playback_file_name.concat(".mp3");
       xSemaphoreGive(audio_playback_semaphore);
 
       vTaskDelay(1000);
@@ -122,7 +108,7 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
   }
 }
 
-uint8_t read_rfid(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out) {
+uint8_t read_rfid_mifare_classic(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out) {
   // Now we try to go through all 16 sectors (each having 4 blocks)
       // authenticating each sector, and then dumping the blocks
       uint8_t data[NFC_BLOCK_SIZE];                         // Array to store block data during reads
@@ -198,4 +184,42 @@ uint8_t read_rfid(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out) 
       }
 
     return 0;
+}
+
+// This requires a lot more steps to read the data so I'm putting it off until I feel like figuring it out
+uint8_t read_rfid_mifare_ultralight(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out) {
+    // bool success = false;
+
+    Serial.println("Seems to be a Mifare Ultralight tag (7 byte UID)");
+    Serial.println("This device is unsupported.");
+
+    // // Try to read the first general-purpose user page (#4)
+    // Serial.println("Reading page 4");
+    // uint8_t data[32];
+    // success = nfc.mifareultralight_ReadPage (4, data);
+    // if (success)
+    // {
+    //   // Data seems to have been read ... spit it out
+    //   nfc.PrintHexChar(data, 4);
+    //   Serial.println("");
+
+    //   // Wait a bit before reading the card again
+    //   delay(1000);
+    // }
+    // else
+    // {
+    //   Serial.println("Ooops ... unable to read the requested page!?");
+    // }
+
+    return 0;
+}
+
+uint8_t read_rfid(uint8_t key[6], uint8_t uid[7], uint8_t uidLength, char* out) {
+  if (uidLength == 4) {
+    return read_rfid_mifare_classic(key, uid, uidLength, out);
+  } else if (uidLength == 7) {
+    return read_rfid_mifare_ultralight(key, uid, uidLength, out);
+  } else {
+    return 0;
+  }
 }

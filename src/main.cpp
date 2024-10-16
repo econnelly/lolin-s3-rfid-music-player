@@ -51,7 +51,7 @@ void setup() {
   init_audio();
 
   Serial.println("Starting input task");
-  xTaskCreate( input_task, "audio_task", 1024*8, (void *) &model, 2 | portPRIVILEGE_BIT, NULL);
+  xTaskCreate( input_task, "input_task", 1024*8, (void *) &model, 2 | portPRIVILEGE_BIT, NULL);
   Serial.println("Starting RFID task");
   xTaskCreatePinnedToCore( rfid_task, "rfid_task", 1024*4, (void *) &model, 2 | portPRIVILEGE_BIT, NULL, 1);
   Serial.println("Starting audio task");

@@ -19,10 +19,6 @@ void init_audio() {
   }
 
   Serial.println();
-
-  if(!SDFAT.exists("lava.mp3")) {
-    Serial.println("FILE NOT FOUND");
-  }
 }
 
 [[noreturn]] void audio_task(void *model) {
